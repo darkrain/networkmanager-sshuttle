@@ -10,7 +10,6 @@ typedef struct {
     GtkWidget *user;
     GtkWidget *port;
     GtkWidget *key;
-    GtkWidget *known_hosts;
 } SshuttleEditor;
 typedef struct { GObjectClass parent; } SshuttleEditorClass;
 static void editor_interface_init(NMVpnEditorInterface *iface);
@@ -25,10 +24,9 @@ static gboolean editor_update(NMVpnEditor *iface, NMConnection *connection, GErr
     const char *host = gtk_editable_get_text(GTK_EDITABLE(self->host));
     const char *user = gtk_editable_get_text(GTK_EDITABLE(self->user));
     const char *key = gtk_editable_get_text(GTK_EDITABLE(self->key));
-    const char *known_hosts = gtk_editable_get_text(GTK_EDITABLE(self->known_hosts));
-    if (!*host || !*user || !*key || !*known_hosts) {
+    if (!*host || !*user || !*key) {
         g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-                            "Enter the server IPv4 address, SSH user, private key and known_hosts paths");
+                            "Enter the server IPv4 address, SSH user and private key path");
         return FALSE;
     }
     NMSettingVpn *vpn = nm_connection_get_setting_vpn(connection);
@@ -42,7 +40,6 @@ static gboolean editor_update(NMVpnEditor *iface, NMConnection *connection, GErr
     g_autofree char *port = g_strdup_printf("%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(self->port)));
     nm_setting_vpn_add_data_item(vpn, "port", port);
     nm_setting_vpn_add_data_item(vpn, "key", key);
-    nm_setting_vpn_add_data_item(vpn, "known-hosts", known_hosts);
     return TRUE;
 }
 static void editor_interface_init(NMVpnEditorInterface *iface) {
@@ -100,13 +97,11 @@ static NMVpnEditor *plugin_get_editor(NMVpnEditorPlugin *plugin, NMConnection *c
     const char *user = vpn ? nm_setting_vpn_get_data_item(vpn, "user") : NULL;
     const char *port = vpn ? nm_setting_vpn_get_data_item(vpn, "port") : NULL;
     const char *key = vpn ? nm_setting_vpn_get_data_item(vpn, "key") : NULL;
-    const char *known_hosts = vpn ? nm_setting_vpn_get_data_item(vpn, "known-hosts") : NULL;
     g_autofree char *default_key = g_build_filename(g_get_home_dir(), ".ssh", "id_ed25519", NULL);
     if (!g_file_test(default_key, G_FILE_TEST_IS_REGULAR)) {
         g_clear_pointer(&default_key, g_free);
         default_key = g_build_filename(g_get_home_dir(), ".ssh", "id_rsa", NULL);
     }
-    g_autofree char *default_known_hosts = g_build_filename(g_get_home_dir(), ".ssh", "known_hosts", NULL);
     SshuttleEditor *self = g_object_new(sshuttle_editor_get_type(), NULL);
     self->host = add_field(self, "Server IPv4 address", host);
     self->user = add_field(self, "SSH user", user ? user : g_get_user_name());
@@ -121,7 +116,6 @@ static NMVpnEditor *plugin_get_editor(NMVpnEditorPlugin *plugin, NMConnection *c
     g_signal_connect(self->port, "value-changed", G_CALLBACK(field_changed), self);
     self->key = add_field(self, "SSH private key path", key ? key :
                           (g_file_test(default_key, G_FILE_TEST_IS_REGULAR) ? default_key : ""));
-    self->known_hosts = add_field(self, "known_hosts path", known_hosts ? known_hosts : default_known_hosts);
     return NM_VPN_EDITOR(self);
 }
 static NMVpnEditorPluginCapability plugin_capabilities(NMVpnEditorPlugin *plugin) {

@@ -1,0 +1,5 @@
+#!/bin/sh
+# SSH key authentication is handled by sshuttle/OpenSSH; there are no
+# NetworkManager VPN secrets to prompt for. GNOME Shell needs a helper
+# response before it will finish loading an existing VPN profile.
+exit 0

@@ -23,14 +23,17 @@ cd networkmanager-sshuttle
 
 Run the script as your regular user. It builds locally, asks for `sudo` for the system files, then reloads D-Bus and NetworkManager. It creates **no VPN profiles** and does not start a connection. Reopen GNOME Settings after installation. Run `./install.sh` again to update the plugin.
 
-In GNOME Settings, add **sshuttle over SSH** under Network → VPN. Enter the server's IPv4 address, SSH user and port, and absolute paths to the private key and `known_hosts` file. The server field starts empty. The editor suggests your local SSH user and an existing `~/.ssh/id_ed25519` or `~/.ssh/id_rsa` key when found; change these to match your server.
+In GNOME Settings, add **sshuttle over SSH** under Network → VPN. Enter the server's IPv4 address, SSH user and port, and the absolute path to a private key. The server field starts empty. The editor suggests your local SSH user and an existing `~/.ssh/id_ed25519` or `~/.ssh/id_rsa` key when found; change these to match your server.
 
-Before connecting for the first time, verify the server's host key and add it to the `known_hosts` file. For example, connect once with `ssh -o StrictHostKeyChecking=ask -i /path/to/key user@server-ip` and verify the fingerprint out of band. For a nonstandard port, use `ssh -p PORT ...`. The plugin uses `StrictHostKeyChecking=yes` and `BatchMode=yes`, so both host trust and key authentication must already work without prompts. A passphrase protected key needs an unattended authentication setup; the current service does not use a user SSH agent.
+On the first connection, OpenSSH automatically accepts the server's host key and stores it in `/var/lib/NetworkManager/sshuttle/known_hosts`, owned by root. Later connections reject a changed key. This removes the separate first-time `ssh` command, but the first connection uses trust on first use: if someone intercepts that first connection, the wrong key could be stored. Verify the server fingerprint through an independent channel when that risk matters to you.
+
+SSH authentication remains noninteractive (`BatchMode=yes`). The current service does not use your desktop SSH agent, so a passphrase protected private key still needs separate support. A dedicated key that can authenticate without a prompt works now. Profiles created by earlier versions with a `known-hosts` setting keep using that file and strict host-key checking.
 
 ## How it works
 
 - NetworkManager controls the profile and shows its status in GNOME.
-- The service runs sshuttle as root and lets sshuttle manage its own nftables rules and DNS interception.
+- GNOME Shell's authentication helper confirms that this SSH key based profile has no VPN password, so saved profiles open in Settings without waiting for a secret prompt.
+- The service runs sshuttle as root and lets sshuttle manage its own nftables rules and DNS interception. Host keys for new profiles are stored in a root-owned file.
 - The server's own IPv4 address and private IPv4 ranges are excluded from forwarding to keep SSH and local network access working.
 - The plugin reports the connection active after sshuttle logs a successful server handshake. When sshuttle exits, NetworkManager sees a failure.
 
@@ -49,7 +52,7 @@ make test
 
 ## Uninstall
 
-Disconnect sshuttle profiles, then run `./uninstall.sh`. It removes the installed service, editor library, `.name` metadata and D-Bus policy. Saved NetworkManager profiles are left in place for you to delete in GNOME Settings.
+Disconnect sshuttle profiles, then run `./uninstall.sh`. It removes the installed service, editor library, `.name` metadata and D-Bus policy. Saved NetworkManager profiles and the root-owned host-key file are left in place so you can review or remove them separately.
 
 ## License
 

@@ -14,6 +14,7 @@ fi
 echo 'Disconnect any active sshuttle connection before continuing.'
 sudo -v
 sudo rm -f -- "$libdir/nm-sshuttle-service" \
+  "$libdir/nm-sshuttle-auth-dialog" \
   "$libdir/NetworkManager/libnm-vpn-plugin-sshuttle.so" \
   "$libdir/NetworkManager/VPN/nm-sshuttle-service.name" \
   /etc/dbus-1/system.d/nm-sshuttle-service.conf

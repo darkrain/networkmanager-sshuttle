@@ -6,6 +6,7 @@
 #include <string.h>
 
 #define SERVICE "org.freedesktop.NetworkManager.sshuttle"
+#define DEFAULT_KNOWN_HOSTS "/var/lib/NetworkManager/sshuttle/known_hosts"
 
 typedef struct {
     NMVpnServicePlugin parent;
@@ -80,7 +81,9 @@ static gboolean service_connect(NMVpnServicePlugin *plugin, NMConnection *connec
     const char *user = vpn ? nm_setting_vpn_get_data_item(vpn, "user") : NULL;
     const char *port_text = vpn ? nm_setting_vpn_get_data_item(vpn, "port") : NULL;
     const char *key = vpn ? nm_setting_vpn_get_data_item(vpn, "key") : NULL;
-    const char *known_hosts = vpn ? nm_setting_vpn_get_data_item(vpn, "known-hosts") : NULL;
+    const char *legacy_known_hosts = vpn ? nm_setting_vpn_get_data_item(vpn, "known-hosts") : NULL;
+    gboolean legacy_trust = legacy_known_hosts && *legacy_known_hosts;
+    const char *known_hosts = legacy_trust ? legacy_known_hosts : DEFAULT_KNOWN_HOSTS;
     struct in_addr addr;
     char *end = NULL;
     long port = port_text ? strtol(port_text, &end, 10) : 22;
@@ -101,7 +104,7 @@ static gboolean service_connect(NMVpnServicePlugin *plugin, NMConnection *connec
     g_autofree char *exclude_host = g_strdup_printf("%s/32", host);
     g_autofree char *quoted_known_hosts = g_shell_quote(known_hosts);
     g_autofree char *quoted_key = g_shell_quote(key);
-    g_autofree char *ssh_cmd = g_strdup_printf("/usr/bin/ssh -F /dev/null -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o IdentityAgent=none -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=%s -i %s", quoted_known_hosts, quoted_key);
+    g_autofree char *ssh_cmd = g_strdup_printf("/usr/bin/ssh -F /dev/null -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o IdentityAgent=none -o IdentitiesOnly=yes -o StrictHostKeyChecking=%s -o UserKnownHostsFile=%s -i %s", legacy_trust ? "yes" : "accept-new", quoted_known_hosts, quoted_key);
     const char *argv[] = {"/usr/bin/sshuttle", "--method=nft", "--disable-ipv6", "--dns",
                           "--remote", remote, "--exclude", exclude_host,
                           "--exclude", "10.0.0.0/8", "--exclude", "172.16.0.0/12",

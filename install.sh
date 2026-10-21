@@ -23,8 +23,20 @@ fi
 make -C "$here" all
 sed "s|@LIBDIR@|$libdir|g" "$here/src/nm-sshuttle-service.name.in" > "$here/build/nm-sshuttle-service.name"
 sudo -v
+sudo install -d -o root -g root -m 0700 /var/lib/NetworkManager/sshuttle
+if sudo test -L /var/lib/NetworkManager/sshuttle/known_hosts; then
+  echo 'Refusing a symlink at the host-key store path.' >&2
+  exit 1
+fi
+if ! sudo test -f /var/lib/NetworkManager/sshuttle/known_hosts; then
+  sudo install -m 0600 /dev/null /var/lib/NetworkManager/sshuttle/known_hosts
+fi
+sudo chown root:root /var/lib/NetworkManager/sshuttle/known_hosts
+sudo chmod 0600 /var/lib/NetworkManager/sshuttle/known_hosts
+
 sudo install -m 0755 "$here/build/nm-sshuttle-service" "$libdir/nm-sshuttle-service.new"
 sudo mv -f "$libdir/nm-sshuttle-service.new" "$libdir/nm-sshuttle-service"
+sudo install -m 0755 "$here/src/nm-sshuttle-auth-dialog" "$libdir/nm-sshuttle-auth-dialog"
 sudo install -m 0644 "$here/build/libnm-vpn-plugin-sshuttle.so" "$libdir/NetworkManager/libnm-vpn-plugin-sshuttle.so.new"
 sudo mv -f "$libdir/NetworkManager/libnm-vpn-plugin-sshuttle.so.new" "$libdir/NetworkManager/libnm-vpn-plugin-sshuttle.so"
 sudo install -m 0644 "$here/build/nm-sshuttle-service.name" "$libdir/NetworkManager/VPN/nm-sshuttle-service.name"

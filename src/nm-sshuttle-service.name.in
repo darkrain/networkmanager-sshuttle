@@ -5,3 +5,7 @@ program=@LIBDIR@/nm-sshuttle-service
 
 [libnm]
 plugin=libnm-vpn-plugin-sshuttle.so
+
+[GNOME]
+auth-dialog=@LIBDIR@/nm-sshuttle-auth-dialog
+supports-external-ui-mode=true
