@@ -1,0 +1,7 @@
+[VPN Connection]
+name=sshuttle
+service=org.freedesktop.NetworkManager.sshuttle
+program=@LIBDIR@/nm-sshuttle-service
+
+[libnm]
+plugin=libnm-vpn-plugin-sshuttle.so

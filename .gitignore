@@ -1,0 +1,8 @@
+/build/
+*.log
+*.key
+*.pem
+*.conf
+!src/nm-sshuttle-service.conf
+*.nmconnection
+id_*
